@@ -55,6 +55,7 @@ body {
 .chat-area .chat-bubble.current-user {
   margin-left: auto;
   background-color: #a5d6a7;
+  position: relative;
 }
 
 .form-control {
@@ -74,6 +75,15 @@ body {
   color: white;
 }
 
+.operation-icon {
+  position: absolute;
+  top: 17px;
+  right: 17px;
+}
+.text {
+  margin-right: 5px;
+  word-break: break-word;
+}
 @media screen and (max-width: 767px) {
   .form-control {
     width: 100%;

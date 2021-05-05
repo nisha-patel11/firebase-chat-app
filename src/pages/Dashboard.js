@@ -26,7 +26,7 @@ class Dashboard extends Component {
       db.ref().on("value", function (snapshot) {
         if (snapshot.val() !== null) {
           groups = Object.keys(snapshot.val());
-          console.log(groups);
+          // console.log(groups);
         }
       });
 

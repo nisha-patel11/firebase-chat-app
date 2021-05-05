@@ -13,6 +13,8 @@ export default class Chat extends Component {
       readError: null,
       writeError: null,
       loadingChats: false,
+      buttonType: "Send",
+      key: "",
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -23,11 +25,15 @@ export default class Chat extends Component {
     this.setState({ readError: null, loadingChats: true });
     const chatArea = this.myRef.current;
     try {
-      console.log("in chat>>>>>>>.", this.props.location.state);
       db.ref(this.props.location.state).on("value", (snapshot) => {
         let chats = [];
         snapshot.forEach((snap) => {
-          chats.push(snap.val());
+          chats.push({
+            key: snap.key,
+            content: snap.val().content,
+            timestamp: snap.val().timestamp,
+            uid: snap.val().uid,
+          });
         });
         chats.sort(function (a, b) {
           return a.timestamp - b.timestamp;
@@ -47,16 +53,25 @@ export default class Chat extends Component {
     });
   }
 
-  async handleSubmit(event) {
+  async handleSubmit(event, value) {
     event.preventDefault();
     this.setState({ writeError: null });
     const chatArea = this.myRef.current;
     try {
-      await db.ref(this.props.location.state).push({
-        content: this.state.content,
-        timestamp: Date.now(),
-        uid: this.state.user.uid,
-      });
+      if (value === "Send") {
+        await db.ref(this.props.location.state).push({
+          content: this.state.content,
+          timestamp: Date.now(),
+          uid: this.state.user.uid,
+        });
+      } else {
+        await db
+          .ref(this.props.location.state)
+          .child(this.state.key)
+          .update({ content: this.state.content });
+        this.setState({ buttonType: "Send" });
+      }
+
       this.setState({ content: "" });
       chatArea.scrollBy(0, chatArea.scrollHeight);
     } catch (error) {
@@ -72,11 +87,22 @@ export default class Chat extends Component {
     return time;
   }
 
+  handleDeleteMessage = (key) => {
+    db.ref(this.props.location.state).child(key).remove();
+  };
+
+  handleUpdate = (chat) => {
+    this.setState({
+      content: chat.content,
+      buttonType: "Update",
+      key: chat.key,
+    });
+  };
+
   render() {
     return (
       <div>
         <Header />
-
         <div className="chat-area" ref={this.myRef}>
           {/* loading indicator */}
           {this.state.loadingChats ? (
@@ -96,7 +122,22 @@ export default class Chat extends Component {
                   (this.state.user.uid === chat.uid ? "current-user" : "")
                 }
               >
-                {chat.content}
+                <sapn className="text">{chat.content}</sapn>
+                <div className="operation-icon">
+                  <i
+                    class="fa fa-pencil"
+                    aria-hidden="true"
+                    style={{ marginRight: "5px" }}
+                    onClick={() => {
+                      this.handleUpdate(chat);
+                    }}
+                  ></i>
+                  <i
+                    class="fa fa-trash"
+                    aria-hidden="true"
+                    onClick={() => this.handleDeleteMessage(chat.key)}
+                  ></i>
+                </div>
                 <br />
                 <span className="chat-time float-right">
                   {this.formatTime(chat.timestamp)}
@@ -105,7 +146,7 @@ export default class Chat extends Component {
             );
           })}
         </div>
-        <form onSubmit={this.handleSubmit} className="mx-3">
+        <form className="mx-3">
           <textarea
             className="form-control"
             name="content"
@@ -115,8 +156,12 @@ export default class Chat extends Component {
           {this.state.error ? (
             <p className="text-danger">{this.state.error}</p>
           ) : null}
-          <button type="submit" className="btn btn-submit px-5 mt-4">
-            Send
+          <button
+            type="submit"
+            className="btn btn-submit px-5 mt-4"
+            onClick={(e) => this.handleSubmit(e, this.state.buttonType)}
+          >
+            {this.state.buttonType}
           </button>
         </form>
         <div className="py-5 mx-3">
